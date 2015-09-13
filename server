@@ -1,2 +1,0 @@
-#!/bin/bash
-make -C ./src && ./src/tftpd 10123 data

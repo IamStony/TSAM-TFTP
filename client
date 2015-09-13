@@ -1,2 +1,0 @@
-!#/bin/sh
-tftp 127.0.0.1 10123 -v -c get example_data1

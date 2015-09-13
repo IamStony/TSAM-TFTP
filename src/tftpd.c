@@ -112,7 +112,7 @@ int main(int argc, char **argv)
                                 response[2] = (char)0;
                                 response[3] = (char)1;
                                 snprintf(&response[4], 511,"%s", &fileBuffer[0]);
-
+                                response[515] = '\0';
                                 sendto(sockfd, response, (size_t) sizeof(response), 0,
                                         (struct sockaddr *) &client,
                                         (socklen_t) sizeof(client));
@@ -121,7 +121,14 @@ int main(int argc, char **argv)
                                 printf("Could not open file\n");
                             }
                         }
-
+                       else if(message[1] == 4)
+                       {
+                            printf("Got ack !");
+                       }
+                       else if(message[1] == 5)
+                       {
+                            printf("Got error");
+                       }
                 } else {
                         fprintf(stdout, "No message in five seconds.\n");
                         fflush(stdout);
