@@ -104,6 +104,7 @@ int main(int argc, char **argv)
 
                             if(confirmConnection(filename, argv[2], mode)) {
                                 printf("Managed to open file\n");
+                                
                                 char response[512];
                                 memset(&response, '\0', sizeof(response));
                                 response[0] = (char)0;
@@ -111,6 +112,10 @@ int main(int argc, char **argv)
                                 response[2] = (char)0;
                                 response[3] = (char)1;
                                 snprintf(&response[4], 511,"%s", &fileBuffer[0]);
+
+                                sendto(sockfd, response, (size_t) sizeof(response), 0,
+                                        (struct sockaddr *) &client,
+                                        (socklen_t) sizeof(client));
                             }
                             else {
                                 printf("Could not open file\n");
