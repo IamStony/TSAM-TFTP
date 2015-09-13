@@ -93,6 +93,8 @@ int main(int argc, char **argv)
 
                         if(message[1] == 1) {
                             //RRQ
+                            printf("ReadRequest\n");
+                            fflush(stdout);
                             char filename[1024], mode[1024];
                             int modePosition = 0;
                             strncpy(filename, &message[2], sizeof(filename));
@@ -111,8 +113,7 @@ int main(int argc, char **argv)
                                 response[1] = (char)3;
                                 response[2] = (char)0;
                                 response[3] = (char)1;
-                                snprintf(&response[4], 511,"%s", &fileBuffer[0]);
-                                response[515] = '\0';
+                                snprintf(&response[4], 513,"%s", &fileBuffer[0]);
                                 sendto(sockfd, response, (size_t) sizeof(response), 0,
                                         (struct sockaddr *) &client,
                                         (socklen_t) sizeof(client));
@@ -124,7 +125,44 @@ int main(int argc, char **argv)
                        else if(message[1] == 4)
                        {
                            /*Ready to send rest of the file */
-                           printf("Got ack !\n");
+
+                           short package = message[2] << 8 | message[3];
+                           short nextPackage = package + 1;
+                           int fileS = strlen(fileBuffer);
+                           int left = fileS - (512 * package);
+                           //printf("Package #%d\nNext package #%d", package, nextPackage);
+                           //printf("Total filesize: %d     ->     Left of file: %d\n", fileS, left);
+                           //fflush(stdout);
+                           if(left < 0) {
+                               printf("Should do nothing\n");
+                               fflush(stdout);
+                           }
+                           else if(left < 512) {
+                               //Last package
+                               char response[left + 4];
+                               response[0] = (char)0;
+                               response[1] = (char)3;
+                               response[2] = (char)((nextPackage >> 8) & 0xff);
+                               response[3] = (char)(nextPackage & 0xff);
+                               snprintf(&response[4], left + 1, "%s", &fileBuffer[512 * package]);
+                               //printf("Last package being sent\nPackage #%d\n", package);
+                               //fflush(stdout);
+                               sendto(sockfd, response, (size_t) sizeof(response), 0,
+                                       (struct sockaddr *) &client,
+                                                       (socklen_t) sizeof(client));
+                           }
+                           else {
+                               //Next package
+                               char response[516];
+                               response[0] = (char)0;
+                               response[1] = (char)3;
+                               response[2] = (char)((nextPackage >> 8) & 0xff);
+                               response[3] = (char)(nextPackage & 0xff);
+                               snprintf(&response[4], 513, "%s", &fileBuffer[512 * package]);
+                               sendto(sockfd, response, (size_t) sizeof(response), 0,
+                                       (struct sockaddr *) &client,
+                                               (socklen_t) sizeof(client));   
+                           }
                        }
                        else if(message[1] == 5)
                        {
