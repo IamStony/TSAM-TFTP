@@ -101,8 +101,16 @@ int main(int argc, char **argv)
                             //fprintf(stdout, "Filename: %s - Mode: %s\n", filename, mode);
 
                             //Now to handle it
+
                             if(confirmConnection(filename, argv[2], mode)) {
                                 printf("Managed to open file\n");
+                                char response[512];
+                                memset(&response, '\0', sizeof(response));
+                                response[0] = (char)0;
+                                response[1] = (char)3;
+                                response[2] = (char)0;
+                                response[3] = (char)1;
+                                snprintf(&response[4], 511,"%s", &fileBuffer[0]);
                             }
                             else {
                                 printf("Could not open file\n");
