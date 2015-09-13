@@ -105,7 +105,7 @@ int main(int argc, char **argv)
                             if(confirmConnection(filename, argv[2], mode)) {
                                 printf("Managed to open file\n");
                                 
-                                char response[512];
+                                char response[516];
                                 memset(&response, '\0', sizeof(response));
                                 response[0] = (char)0;
                                 response[1] = (char)3;
@@ -123,11 +123,12 @@ int main(int argc, char **argv)
                         }
                        else if(message[1] == 4)
                        {
-                            printf("Got ack !");
+                           /*Ready to send rest of the file */
+                           printf("Got ack !\n");
                        }
                        else if(message[1] == 5)
                        {
-                            printf("Got error");
+                           printf("Got error");
                        }
                 } else {
                         fprintf(stdout, "No message in five seconds.\n");
