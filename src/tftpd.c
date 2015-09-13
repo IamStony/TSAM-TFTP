@@ -14,8 +14,12 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
-void confirmConnection(char* fn, char* m);
+bool confirmConnection(char* fn, char *dir, char* m);
+
+char *fileBuffer;
 
 int main(int argc, char **argv)
 {
@@ -97,7 +101,12 @@ int main(int argc, char **argv)
                             //fprintf(stdout, "Filename: %s - Mode: %s\n", filename, mode);
 
                             //Now to handle it
-                            confirmConnection(filename, mode);
+                            if(confirmConnection(filename, argv[2], mode)) {
+                                printf("Managed to open file\n");
+                            }
+                            else {
+                                printf("Could not open file\n");
+                            }
                         }
 
                 } else {
@@ -107,7 +116,45 @@ int main(int argc, char **argv)
         }
 }
 
-void confirmConnection(char* fn, char* m) {
-    //fprintf(stdout, "Filename: %s - Mode: %s\n", fn, m);
-    FILE *fp;
+bool confirmConnection(char *fn, char *dir, char *m) {
+    fprintf(stdout, "File: %s/%s - Mode: %s\n", dir, fn, m);
+    FILE *f;
+    long lSize;
+    char dirFile[strlen(dir) + 1 + strlen(fn) + 1];
+    snprintf(dirFile, sizeof(dirFile), "%s/%s", dir, fn);
+    
+    //printf("Currently: %s.\n", dirFile);
+    //printf("Should be: %s/%s.\n", dir, fn);
+
+    f = fopen(dirFile, "r");
+    if( !f )
+    {
+        printf("File open failed\n");
+        return false;
+    }
+
+    fseek(f, 0L, SEEK_END);
+    lSize = ftell(f);
+    rewind(f);
+
+    /*allocate memory for entire content */
+    fileBuffer = calloc( 1, lSize+1 );
+    if( !fileBuffer )
+    {
+        printf("Calloc failed\n");
+        fclose(f);
+        return false;
+    }
+
+    /* copy the file into the fileBuffer */
+    if( 1!=fread( fileBuffer , lSize, 1 , f) )
+    {
+        printf("Read failed :/\n");
+        free(fileBuffer);
+        return false;
+    }
+
+    fclose(f);
+    free(fileBuffer);
+    return true;
 }
