@@ -200,7 +200,7 @@ bool confirmConnection(char *fn, char *dir, char *m) {
     fseek(f, 0L, SEEK_END);
     lSize = ftell(f);
     rewind(f);
-    printf("Size of file: %lu\n , Size of fileBuffer: %lu\n", lSize, sizeof(fileBuffer));
+    printf("Size of file: %lu\nSize of fileBuffer: %lu\n", lSize, sizeof(fileBuffer));
 
     /*allocate memory for entire content */
     fileBuffer = calloc( 1, lSize+1 );
