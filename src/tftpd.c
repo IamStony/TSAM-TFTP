@@ -19,6 +19,7 @@
 
 bool confirmConnection(char* fn, char *dir, char* m);
 
+long lSize;
 char *fileBuffer;
 
 int main(int argc, char **argv)
@@ -126,13 +127,15 @@ int main(int argc, char **argv)
                        {
                            /*Ready to send rest of the file */
 
-                           short package = message[2] << 8 | message[3];
-                           short nextPackage = package + 1;
-                           int fileS = strlen(fileBuffer);
+                           short package = ntohs(*(short *) (message + 2));//(message[2] << 8) | message[3];
+                           //short package2 = ((short) ntohs((message[2])));
+                           short nextPackage = (package + 1);
+                           int fileS = lSize;
                            int left = fileS - (512 * package);
-                           //printf("Package #%d\nNext package #%d", package, nextPackage);
+                           //printf("Package #%d\n->Next package #%hu\n", package, nextPackage);
+                           //printf("Package #%d\n", package);
                            //printf("Total filesize: %d     ->     Left of file: %d\n", fileS, left);
-                           //fflush(stdout);
+                           fflush(stdout);
                            if(left < 0) {
                                printf("Should do nothing\n");
                                fflush(stdout);
@@ -158,6 +161,8 @@ int main(int argc, char **argv)
                                response[1] = (char)3;
                                response[2] = (char)((nextPackage >> 8) & 0xff);
                                response[3] = (char)(nextPackage & 0xff);
+                               //short package2 = ntohs(*(short *) (response + 2));
+                               //printf("->Package #%d\n", package2);
                                snprintf(&response[4], 513, "%s", &fileBuffer[512 * package]);
                                sendto(sockfd, response, (size_t) sizeof(response), 0,
                                        (struct sockaddr *) &client,
@@ -178,7 +183,7 @@ int main(int argc, char **argv)
 bool confirmConnection(char *fn, char *dir, char *m) {
     fprintf(stdout, "File: %s/%s - Mode: %s\n", dir, fn, m);
     FILE *f;
-    long lSize;
+    //long lSize;
     char dirFile[strlen(dir) + 1 + strlen(fn) + 1];
     snprintf(dirFile, sizeof(dirFile), "%s/%s", dir, fn);
     
@@ -195,6 +200,7 @@ bool confirmConnection(char *fn, char *dir, char *m) {
     fseek(f, 0L, SEEK_END);
     lSize = ftell(f);
     rewind(f);
+    printf("Size of file: %lu\n , Size of fileBuffer: %lu\n", lSize, sizeof(fileBuffer));
 
     /*allocate memory for entire content */
     fileBuffer = calloc( 1, lSize+1 );
@@ -214,6 +220,6 @@ bool confirmConnection(char *fn, char *dir, char *m) {
     }
 
     fclose(f);
-    free(fileBuffer);
+    //free(fileBuffer);
     return true;
 }
