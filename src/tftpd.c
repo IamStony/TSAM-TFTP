@@ -18,7 +18,6 @@
 #include <stdbool.h>
 
 bool confirmConnection(char* fn, char *dir, char* m);
-//void buildNextPackage(char* response);
 
 FILE *f2;
 long lSize;
@@ -98,7 +97,14 @@ int main(int argc, char **argv)
                             //RRQ
                             char filename[1024], mode[1024];
                             int modePosition = 0;
+                            memset(&filename, '\0', sizeof(filename));
                             strncpy(filename, &message[2], sizeof(filename));
+                            filename[1023] = '\0';
+                            printf("file \"%s\" requested from %d.%d.%d.%d\n",filename,
+                                   (int)(client.sin_addr.s_addr&0xFF),
+                                    (int)((client.sin_addr.s_addr&0xFF00)>>8),
+                                     (int)((client.sin_addr.s_addr&0xFF0000)>>16),
+                                      (int)((client.sin_addr.s_addr&0xFF000000)>>24));
                             modePosition = (int) strlen(filename) + 3;
                             strncpy(mode, &message[modePosition], sizeof(mode));
 
@@ -120,7 +126,16 @@ int main(int argc, char **argv)
                                         (socklen_t) sizeof(client));
                             }
                             else {
-                                printf("Could not open file\n");
+                                char msg[20];
+                                msg[0] = (char)0;
+                                msg[1] = (char)5;
+                                msg[2] = (char)0;
+                                msg[3] = (char)1;
+                                strncpy(msg + 4, "File Not Found", 15);
+                                sendto(sockfd, msg, (size_t)(sizeof(msg)), 0,
+                                      (struct sockaddr *) &client,
+                                      (socklen_t) sizeof(client));
+                                printf("Could not open file: %s\n", filename);
                             }
                         }
                        else if(message[1] == 4)
@@ -166,7 +181,19 @@ int main(int argc, char **argv)
                        }
                        else if(message[1] == 5)
                        {
-                           printf("Got error");
+                           printf("Got error: %s\n ", message + 4);
+                       }
+                       else if(message[1] == 2)
+                       {
+                            char msg[30];
+                            msg[0] = (char) 0;
+                            msg[1] = (char) 5;
+                            msg[2] = (char) 0;
+                            msg[3] = (char) 0;
+                            strncpy(msg + 4, "Uploading is not allowed",25);
+                            sendto(sockfd,msg,(size_t)(sizeof(msg)), 0,
+                                  (struct sockaddr *) &client,
+                                  (socklen_t) sizeof(client));
                        }
                 } else {
                         fprintf(stdout, "No message in five seconds.\n");
@@ -178,6 +205,9 @@ int main(int argc, char **argv)
 bool confirmConnection(char *fn, char *dir, char *m) {
     FILE *f;
     char dirFile[strlen(dir) + 1 + strlen(fn) + 1];
+    if (strstr(fn, "../") != NULL) {
+            return false;
+     }
     snprintf(dirFile, sizeof(dirFile), "%s/%s", dir, fn);
     
     if(strcmp(m, "netascii") == 0){
