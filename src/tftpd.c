@@ -18,9 +18,11 @@
 #include <stdbool.h>
 
 bool confirmConnection(char* fn, char *dir, char* m);
+//void buildNextPackage(char* response);
 
+FILE *f2;
 long lSize;
-char *fileBuffer;
+char* fileBuffer;
 
 int main(int argc, char **argv)
 {
@@ -94,19 +96,15 @@ int main(int argc, char **argv)
 
                         if(message[1] == 1) {
                             //RRQ
-                            printf("ReadRequest\n");
-                            fflush(stdout);
                             char filename[1024], mode[1024];
                             int modePosition = 0;
                             strncpy(filename, &message[2], sizeof(filename));
                             modePosition = (int) strlen(filename) + 3;
                             strncpy(mode, &message[modePosition], sizeof(mode));
-                            //fprintf(stdout, "Filename: %s - Mode: %s\n", filename, mode);
 
                             //Now to handle it
 
                             if(confirmConnection(filename, argv[2], mode)) {
-                                printf("Managed to open file\n");
                                 
                                 char response[516];
                                 memset(&response, '\0', sizeof(response));
@@ -114,7 +112,9 @@ int main(int argc, char **argv)
                                 response[1] = (char)3;
                                 response[2] = (char)0;
                                 response[3] = (char)1;
-                                snprintf(&response[4], 513,"%s", &fileBuffer[0]);
+                                
+                                fread(response+4, 1, 512, f2);
+                                
                                 sendto(sockfd, response, (size_t) sizeof(response), 0,
                                         (struct sockaddr *) &client,
                                         (socklen_t) sizeof(client));
@@ -127,18 +127,13 @@ int main(int argc, char **argv)
                        {
                            /*Ready to send rest of the file */
 
-                           short package = ntohs(*(short *) (message + 2));//(message[2] << 8) | message[3];
-                           //short package2 = ((short) ntohs((message[2])));
+                           short package = ntohs(*(short *) (message + 2));
                            short nextPackage = (package + 1);
                            int fileS = lSize;
                            int left = fileS - (512 * package);
-                           //printf("Package #%d\n->Next package #%hu\n", package, nextPackage);
-                           //printf("Package #%d\n", package);
-                           //printf("Total filesize: %d     ->     Left of file: %d\n", fileS, left);
-                           fflush(stdout);
+                           
                            if(left < 0) {
-                               printf("Should do nothing\n");
-                               fflush(stdout);
+                               //just to stop, does nothing
                            }
                            else if(left < 512) {
                                //Last package
@@ -147,9 +142,9 @@ int main(int argc, char **argv)
                                response[1] = (char)3;
                                response[2] = (char)((nextPackage >> 8) & 0xff);
                                response[3] = (char)(nextPackage & 0xff);
-                               snprintf(&response[4], left + 1, "%s", &fileBuffer[512 * package]);
-                               //printf("Last package being sent\nPackage #%d\n", package);
-                               //fflush(stdout);
+                               
+                               fread(response+4, 1, 512, f2);
+                               
                                sendto(sockfd, response, (size_t) sizeof(response), 0,
                                        (struct sockaddr *) &client,
                                                        (socklen_t) sizeof(client));
@@ -161,9 +156,9 @@ int main(int argc, char **argv)
                                response[1] = (char)3;
                                response[2] = (char)((nextPackage >> 8) & 0xff);
                                response[3] = (char)(nextPackage & 0xff);
-                               //short package2 = ntohs(*(short *) (response + 2));
-                               //printf("->Package #%d\n", package2);
-                               snprintf(&response[4], 513, "%s", &fileBuffer[512 * package]);
+                               
+                               fread(response+4, 1, 512, f2);
+                               
                                sendto(sockfd, response, (size_t) sizeof(response), 0,
                                        (struct sockaddr *) &client,
                                                (socklen_t) sizeof(client));   
@@ -181,16 +176,19 @@ int main(int argc, char **argv)
 }
 
 bool confirmConnection(char *fn, char *dir, char *m) {
-    fprintf(stdout, "File: %s/%s - Mode: %s\n", dir, fn, m);
     FILE *f;
-    //long lSize;
     char dirFile[strlen(dir) + 1 + strlen(fn) + 1];
     snprintf(dirFile, sizeof(dirFile), "%s/%s", dir, fn);
     
-    //printf("Currently: %s.\n", dirFile);
-    //printf("Should be: %s/%s.\n", dir, fn);
+    if(strcmp(m, "netascii") == 0){
+        f = fopen(dirFile, "r");
+        f2 = fopen(dirFile, "r");
+    }
+    else {
+        f = fopen(dirFile, "rb");
+        f2 = fopen(dirFile, "rb");
+    }
 
-    f = fopen(dirFile, "r");
     if( !f )
     {
         printf("File open failed\n");
@@ -200,7 +198,6 @@ bool confirmConnection(char *fn, char *dir, char *m) {
     fseek(f, 0L, SEEK_END);
     lSize = ftell(f);
     rewind(f);
-    printf("Size of file: %lu\nSize of fileBuffer: %lu\n", lSize, sizeof(fileBuffer));
 
     /*allocate memory for entire content */
     fileBuffer = calloc( 1, lSize+1 );
@@ -220,6 +217,6 @@ bool confirmConnection(char *fn, char *dir, char *m) {
     }
 
     fclose(f);
-    //free(fileBuffer);
+    free(fileBuffer);
     return true;
 }
