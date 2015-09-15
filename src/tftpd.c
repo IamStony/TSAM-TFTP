@@ -111,19 +111,35 @@ int main(int argc, char **argv)
                             //Now to handle it
 
                             if(confirmConnection(filename, argv[2], mode)) {
+                                int fileS = lSize;
+                                if(fileS < 512) {
+                                    //First and Last package
+                                    char response[fileS + 4];
+                                    response[0] = (char)0;
+                                    response[1] = (char)3;
+                                    response[2] = (char)0;
+                                    response[3] = (char)1;
+                                                                        
+                                    fread(response+4, 1, 512, f2);
+                                    
+                                    sendto(sockfd, response, (size_t) sizeof(response), 0,
+                                            (struct sockaddr *) &client,
+                                                                    (socklen_t) sizeof(client));   
+                                }
+                                else {
+                                    char response[516];
+                                    memset(&response, '\0', sizeof(response));
+                                    response[0] = (char)0;
+                                    response[1] = (char)3;
+                                    response[2] = (char)0;
+                                    response[3] = (char)1;
                                 
-                                char response[516];
-                                memset(&response, '\0', sizeof(response));
-                                response[0] = (char)0;
-                                response[1] = (char)3;
-                                response[2] = (char)0;
-                                response[3] = (char)1;
+                                    fread(response+4, 1, 512, f2);
                                 
-                                fread(response+4, 1, 512, f2);
-                                
-                                sendto(sockfd, response, (size_t) sizeof(response), 0,
-                                        (struct sockaddr *) &client,
-                                        (socklen_t) sizeof(client));
+                                    sendto(sockfd, response, (size_t) sizeof(response), 0,
+                                            (struct sockaddr *) &client,
+                                            (socklen_t) sizeof(client));
+                                }
                             }
                             else {
                                 char msg[20];
