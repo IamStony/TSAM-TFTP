@@ -22,6 +22,9 @@ bool confirmConnection(char* fn, char *dir, char* m);
 FILE *f2;
 long lSize;
 char* fileBuffer;
+short lastPackage = 0;
+char lastMessage[512];
+
 
 int main(int argc, char **argv)
 {
@@ -121,7 +124,7 @@ int main(int argc, char **argv)
                                     response[3] = (char)1;
                                                                         
                                     fread(response+4, 1, 512, f2);
-                                    
+
                                     sendto(sockfd, response, (size_t) sizeof(response), 0,
                                             (struct sockaddr *) &client,
                                                                     (socklen_t) sizeof(client));   
@@ -135,11 +138,12 @@ int main(int argc, char **argv)
                                     response[3] = (char)1;
                                 
                                     fread(response+4, 1, 512, f2);
-                                
+
                                     sendto(sockfd, response, (size_t) sizeof(response), 0,
                                             (struct sockaddr *) &client,
                                             (socklen_t) sizeof(client));
                                 }
+                                lastPackage = 1;
                             }
                             else {
                                 char msg[20];
@@ -157,11 +161,24 @@ int main(int argc, char **argv)
                        else if(message[1] == 4)
                        {
                            /*Ready to send rest of the file */
+                           
 
                            short package = ntohs(*(short *) (message + 2));
                            short nextPackage = (package + 1);
                            int fileS = lSize;
                            int left = fileS - (512 * package);
+                           
+                           if(nextPackage == lastPackage) {
+                               printf("Resending package\n");
+                               char response[left + 4];
+                               response[0] = (char)0;
+                               response[1] = (char)3;
+                               response[2] = (char)((nextPackage >> 8) & 0xff);
+                               response[3] = (char)(nextPackage & 0xff);
+                               size_t n = strlen(lastMessage);
+                               strncpy(&response[4], lastMessage, n);
+                               continue;
+                           }
                            
                            if(left < 0) {
                                //just to stop, does nothing
@@ -175,6 +192,8 @@ int main(int argc, char **argv)
                                response[3] = (char)(nextPackage & 0xff);
                                
                                fread(response+4, 1, 512, f2);
+                               memset(lastMessage, '\0', 512);
+                               strcpy(lastMessage, response+4);
                                
                                sendto(sockfd, response, (size_t) sizeof(response), 0,
                                        (struct sockaddr *) &client,
@@ -194,6 +213,7 @@ int main(int argc, char **argv)
                                        (struct sockaddr *) &client,
                                                (socklen_t) sizeof(client));   
                            }
+                           lastPackage = nextPackage;
                        }
                        else if(message[1] == 5)
                        {
